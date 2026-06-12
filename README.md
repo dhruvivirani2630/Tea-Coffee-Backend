@@ -7,6 +7,19 @@ Production-ready Node.js, Express.js, MongoDB, JWT authentication, and role mana
 ```bash
 npm install
 cp .env.example .env
+```
+
+Edit `.env` and set at least `MONGO_URI` and `JWT_SECRET`.
+
+### MongoDB Atlas (required for cloud DB)
+
+If you use MongoDB Atlas and see a **whitelist / IP access** error:
+
+1. Open [MongoDB Atlas](https://cloud.mongodb.com) → your project → **Network Access**
+2. Click **Add IP Address** → **Add Current IP Address** (or `0.0.0.0/0` for local dev only)
+3. Wait 1–2 minutes, then run the commands below
+
+```bash
 npm run seed-admin
 npm run dev
 ```

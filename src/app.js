@@ -11,7 +11,7 @@ const { sendSuccess } = require("./utils/responseHandler");
 
 const app = express();
 
-const allowedOrigins = (process.env.CORS_ORIGIN || "")
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);

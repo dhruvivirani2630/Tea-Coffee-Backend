@@ -1,6 +1,7 @@
 const authService = require("../services/authService");
 const jwtConfig = require("../config/jwt");
 const { sendSuccess } = require("../utils/responseHandler");
+const logger = require("../utils/logger");
 
 const cookieOptions = {
   httpOnly: true,
@@ -10,20 +11,58 @@ const cookieOptions = {
 
 const register = async (req, res, next) => {
   try {
+    logger.info("Register request received", {
+      employeeId: req.body.employeeId,
+      email: req.body.email,
+      phone: req.body.phone,
+    });
+
     const data = await authService.registerUser(req.body);
+
+    logger.info("Register successful", {
+      userId: data.user._id,
+      employeeId: data.user.employeeId,
+      email: data.user.email,
+      phone: data.user.phone,
+    });
+
     res.cookie(jwtConfig.cookieName, data.token, cookieOptions);
     return sendSuccess(res, 201, "User registered successfully", data);
   } catch (error) {
+    logger.error("Register failed", {
+      employeeId: req.body.employeeId,
+      email: req.body.email,
+      phone: req.body.phone,
+      error: error.message,
+    });
     next(error);
   }
 };
 
 const login = async (req, res, next) => {
   try {
+    logger.info("Login request received", {
+      email: req.body.email,
+      phone: req.body.phone,
+    });
+
     const data = await authService.loginUser(req.body);
+
+    logger.info("Login successful", {
+      userId: data.user._id,
+      employeeId: data.user.employeeId,
+      email: data.user.email,
+      phone: data.user.phone,
+    });
+
     res.cookie(jwtConfig.cookieName, data.token, cookieOptions);
     return sendSuccess(res, 200, "Login successful", data);
   } catch (error) {
+    logger.error("Login failed", {
+      email: req.body.email,
+      phone: req.body.phone,
+      error: error.message,
+    });
     next(error);
   }
 };
