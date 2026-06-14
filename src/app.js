@@ -6,6 +6,8 @@ const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const profileRoutes = require("./routes/profileRoutes");
+const adminUserRoutes = require("./routes/adminUserRoutes");
 const { notFound, errorHandler } = require("./middlewares/errorMiddleware");
 const { sendSuccess } = require("./utils/responseHandler");
 
@@ -57,7 +59,9 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/users", profileRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/admin", adminUserRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

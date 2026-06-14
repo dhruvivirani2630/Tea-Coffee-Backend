@@ -40,13 +40,17 @@ const loginValidator = [
     .trim()
     .isLength({ min: 7, max: 20 })
     .withMessage("Phone number must be between 7 and 20 characters"),
+  body("identifier").optional({ checkFalsy: true }).trim(),
   body().custom((value) => {
-    if (!value.email && !value.phone) {
-      throw new Error("Email or phone is required");
+    if (!value.email && !value.phone && !value.identifier) {
+      throw new Error("Email, phone, or identifier is required");
     }
 
-    if (value.email && value.phone) {
-      throw new Error("Use either email or phone, not both");
+    if (
+      (value.email && value.phone) ||
+      (value.identifier && (value.email || value.phone))
+    ) {
+      throw new Error("Use only one login field");
     }
 
     return true;

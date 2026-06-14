@@ -1,8 +1,17 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const { serializeUser } = require("../utils/userSerializer");
 
-const allowedUserUpdates = ["name", "email", "phone"];
-const allowedAdminUpdates = ["name", "email", "phone", "employeeId", "role", "status"];
+const allowedUserUpdates = ["name", "email", "phone", "profileImage"];
+const allowedAdminUpdates = [
+  "name",
+  "email",
+  "phone",
+  "employeeId",
+  "role",
+  "status",
+  "profileImage",
+];
 
 const normalizePatch = (payload) => {
   const patch = { ...payload };
@@ -17,6 +26,12 @@ const normalizePatch = (payload) => {
     delete patch.phone;
   } else if (patch.phone) {
     patch.phone = patch.phone.trim();
+  }
+
+  if (patch.profileImage === "") {
+    delete patch.profileImage;
+  } else if (patch.profileImage) {
+    patch.profileImage = patch.profileImage.trim();
   }
 
   return patch;
@@ -57,11 +72,12 @@ const buildUserQuery = ({ search, role, status }) => {
 
 const getUsers = async (filters = {}) => {
   const query = buildUserQuery(filters);
-  return User.find(query).sort({ createdAt: -1 });
+  const users = await User.find(query).sort({ createdAt: -1 });
+  return users.map((user) => serializeUser(user));
 };
 
 const getUserById = async (id) => {
-  const user = await User.findById(id);
+  const user = await User.findById(id).select("-password -__v");
 
   if (!user) {
     const error = new Error("User not found");
@@ -69,7 +85,7 @@ const getUserById = async (id) => {
     throw error;
   }
 
-  return user;
+  return serializeUser(user);
 };
 
 const updateUser = async ({ targetUserId, actor, payload }) => {
@@ -97,16 +113,6 @@ const updateUser = async ({ targetUserId, actor, payload }) => {
     throw error;
   }
 
-  if (patch.role === "admin") {
-    const existingAdmin = await User.findOne({ role: "admin" });
-
-    if (existingAdmin && existingAdmin._id.toString() !== targetUserId.toString()) {
-      const error = new Error("Only one admin account is allowed");
-      error.statusCode = 409;
-      throw error;
-    }
-  }
-
   const user = await User.findByIdAndUpdate(targetUserId, patch, {
     new: true,
     runValidators: true,
@@ -118,7 +124,10 @@ const updateUser = async ({ targetUserId, actor, payload }) => {
     throw error;
   }
 
-  return user;
+  user.updatedBy = actor._id;
+  await user.save();
+
+  return serializeUser(user);
 };
 
 const deleteUser = async ({ targetUserId, actor }) => {
@@ -148,7 +157,7 @@ const updateUserStatus = async ({ targetUserId, status, actor }) => {
 
   const user = await User.findByIdAndUpdate(
     targetUserId,
-    { status },
+    { status, updatedBy: actor._id },
     { new: true, runValidators: true }
   );
 
@@ -158,7 +167,7 @@ const updateUserStatus = async ({ targetUserId, status, actor }) => {
     throw error;
   }
 
-  return user;
+  return serializeUser(user);
 };
 
 const changePassword = async ({ userId, currentPassword, newPassword }) => {
@@ -179,6 +188,7 @@ const changePassword = async ({ userId, currentPassword, newPassword }) => {
   }
 
   user.password = await bcrypt.hash(newPassword, 12);
+  user.updatedBy = user._id;
   await user.save();
 
   return true;

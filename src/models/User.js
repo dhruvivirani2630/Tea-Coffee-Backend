@@ -31,6 +31,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
       index: true,
     },
+    profileImage: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     password: {
       type: String,
       required: [true, "Password is required"],
@@ -48,6 +53,11 @@ const userSchema = new mongoose.Schema(
       default: "active",
       index: true,
     },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     lastLogin: {
       type: Date,
       default: null,
@@ -56,6 +66,13 @@ const userSchema = new mongoose.Schema(
   {
     timestamps: true,
     toJSON: {
+      transform(doc, ret) {
+        delete ret.password;
+        delete ret.__v;
+        return ret;
+      },
+    },
+    toObject: {
       transform(doc, ret) {
         delete ret.password;
         delete ret.__v;

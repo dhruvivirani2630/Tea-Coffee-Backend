@@ -1,6 +1,6 @@
 # Tea Coffee Backend
 
-Production-ready Node.js, Express.js, MongoDB, JWT authentication, and role management API.
+Production-ready Node.js, Express.js, MongoDB, JWT authentication, profile management, and role-based admin APIs.
 
 ## Setup
 
@@ -11,13 +11,13 @@ cp .env.example .env
 
 Edit `.env` and set at least `MONGO_URI` and `JWT_SECRET`.
 
-### MongoDB Atlas (required for cloud DB)
+### MongoDB Atlas
 
-If you use MongoDB Atlas and see a **whitelist / IP access** error:
+If you use MongoDB Atlas and see a whitelist or IP access error:
 
-1. Open [MongoDB Atlas](https://cloud.mongodb.com) → your project → **Network Access**
-2. Click **Add IP Address** → **Add Current IP Address** (or `0.0.0.0/0` for local dev only)
-3. Wait 1–2 minutes, then run the commands below
+1. Open MongoDB Atlas, go to your project, then Network Access.
+2. Add your current IP address, or `0.0.0.0/0` for local development only.
+3. Wait 1 to 2 minutes, then run the server again.
 
 ```bash
 npm run seed-admin
@@ -32,25 +32,19 @@ http://localhost:5000
 
 ## Environment Variables
 
-See `.env.example` for all supported settings.
-
-Important values:
-
 ```env
 MONGO_URI=mongodb://127.0.0.1:27017/tea-coffee-auth
 JWT_SECRET=replace_with_a_long_random_secret
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGIN=http://localhost:5173
 ```
 
 ## Default Admin
-
-Create the default admin:
 
 ```bash
 npm run seed-admin
 ```
 
-The seed script skips creation when any admin account already exists.
+The seed script skips creation when an admin account already exists.
 
 ```json
 {
@@ -84,123 +78,111 @@ Error:
 
 ## Authentication APIs
 
-### Register
-
 ```http
 POST /api/auth/register
-Content-Type: application/json
-```
-
-```json
-{
-  "employeeId": "EMP001",
-  "name": "Jane User",
-  "email": "jane@example.com",
-  "password": "User@1234"
-}
-```
-
-### Login With Email
-
-```http
 POST /api/auth/login
-Content-Type: application/json
-```
-
-```json
-{
-  "email": "jane@example.com",
-  "password": "User@1234"
-}
-```
-
-### Login With Phone
-
-```json
-{
-  "phone": "9876543210",
-  "password": "User@1234"
-}
-```
-
-### Logout
-
-```http
 POST /api/auth/logout
-Authorization: Bearer <token>
-```
-
-### Current User
-
-```http
 GET /api/auth/profile
-Authorization: Bearer <token>
 ```
 
-## User APIs
+## Profile APIs
 
-Admin only:
+Authenticated user:
 
 ```http
-GET /api/users?search=jane&role=user&status=active
-DELETE /api/users/:id
-PATCH /api/users/:id/status
+GET /api/users/profile
+PUT /api/users/profile
+PUT /api/users/change-password
 ```
 
-Admin or own user:
-
-```http
-GET /api/users/:id
-PUT /api/users/:id
-```
-
-Own authenticated user:
-
-```http
-PATCH /api/users/me/password
-```
-
-Update user:
+Update profile payload:
 
 ```json
 {
   "name": "Jane Updated",
-  "phone": "9876543210"
+  "email": "jane@example.com",
+  "phone": "9876543210",
+  "profileImage": "data:image/png;base64,..."
 }
 ```
 
-Admin role/status update:
-
-```json
-{
-  "role": "user",
-  "status": "inactive"
-}
-```
-
-Status update:
-
-```json
-{
-  "status": "inactive"
-}
-```
-
-Change password:
+Change password payload:
 
 ```json
 {
   "currentPassword": "User@1234",
-  "newPassword": "NewUser@1234"
+  "newPassword": "NewUser@1234",
+  "confirmPassword": "NewUser@1234"
 }
 ```
 
-## Security
+## Admin User APIs
 
-- Passwords are hashed with bcryptjs.
-- JWT payload contains `id` and `role`.
-- JWT can be sent as `Authorization: Bearer <token>` or the HTTP-only auth cookie.
-- Helmet, CORS, cookie parsing, request validation, and rate limiting are enabled.
-- Signup always creates `role: "user"`.
-- Admin creation is limited to the seed script and skipped when an admin exists.
-- Inactive users cannot login or access protected routes.
+Admin only:
+
+```http
+GET /api/admin/users?search=jane&employeeId=EMP001&role=user&status=active
+GET /api/admin/users/:id
+PUT /api/admin/users/:id
+```
+
+Admin update payload:
+
+```json
+{
+  "name": "Jane Updated",
+  "email": "jane@example.com",
+  "phone": "9876543210",
+  "employeeId": "EMP002",
+  "role": "user",
+  "status": "active",
+  "profileImage": "https://example.com/image.jpg"
+}
+```
+
+## Folder Structure
+
+```text
+src/
+  controllers/
+  middlewares/
+  models/
+  routes/
+  services/
+  validators/
+  utils/
+frontend/
+  src/
+    api/
+    components/
+    context/
+    pages/
+    styles/
+```
+
+## Security Notes
+
+- Passwords are never returned in API responses.
+- JWT-protected routes are enforced with bearer tokens or HTTP-only cookies.
+- Role-based authorization protects admin-only endpoints.
+- Email, phone, and employee ID duplicates are rejected with conflict errors.
+- Profile image input is validated as an image URL or data URI and capped at 2MB.
+
+## Frontend Scaffold
+
+The repo now includes a Vite-ready React scaffold under `frontend/` with:
+
+- Profile page
+- Edit profile form
+- Change password page
+- Admin user list and edit page
+- Shared Axios service layer
+- Basic loading, error, and success UI states
+
+To run it after installing dependencies in `frontend/`:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```

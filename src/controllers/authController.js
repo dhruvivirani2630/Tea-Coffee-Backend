@@ -44,6 +44,7 @@ const login = async (req, res, next) => {
     logger.info("Login request received", {
       email: req.body.email,
       phone: req.body.phone,
+      identifier: req.body.identifier,
     });
 
     const data = await authService.loginUser(req.body);
@@ -61,6 +62,7 @@ const login = async (req, res, next) => {
     logger.error("Login failed", {
       email: req.body.email,
       phone: req.body.phone,
+      identifier: req.body.identifier,
       error: error.message,
     });
     next(error);
