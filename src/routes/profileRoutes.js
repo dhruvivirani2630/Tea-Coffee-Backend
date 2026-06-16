@@ -12,7 +12,7 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get("/profile", profileController.getProfile);
-router.put("/profile", updateProfileValidator, validate, profileController.updateProfile);
+router.put("/update-profile", updateProfileValidator, validate, profileController.updateProfile);
 router.put(
   "/change-password",
   changePasswordValidator,

@@ -89,10 +89,30 @@ const registerUser = async ({ name, employeeId, email, phone, password }) => {
   };
 };
 
-const loginUser = async ({ email, phone, identifier, password }) => {
-  const query = resolveLoginQuery({ email, phone, identifier });
+const loginUser = async (data) => {
+  const { email, phone, identifier, password } = data;
 
-  if (!query) {
+  // Validate input
+  if (!password) {
+    const error = new Error("Password is required");
+    error.statusCode = 422;
+    throw error;
+  }
+
+  let query = {};
+
+  if (email) {
+    query.email = email.toLowerCase().trim();
+  } else if (phone) {
+    query.phone = phone.trim();
+  } else if (identifier) {
+    query = {
+      $or: [
+        { email: identifier.toLowerCase().trim() },
+        { phone: identifier.trim() },
+      ],
+    };
+  } else {
     const error = new Error("Email, phone, or identifier is required");
     error.statusCode = 422;
     throw error;

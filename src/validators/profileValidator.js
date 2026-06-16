@@ -1,10 +1,45 @@
 const { body } = require("express-validator");
 const { passwordRule } = require("./authValidator");
 
+const allowedProfileFields = ["name", "email", "phone", "profileImage"];
+const restrictedProfileFields = [
+  "role",
+  "employeeId",
+  "password",
+  "status",
+  "createdAt",
+  "updatedAt",
+];
 const imageDataUri =
   /^data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,[A-Za-z0-9+/=\r\n]+$/i;
 const imageUrl = /^https?:\/\/.+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i;
 const maxBase64Size = 2 * 1024 * 1024;
+const phonePattern = /^\+?[0-9\s().-]{7,20}$/;
+
+const trimString = (value) => (typeof value === "string" ? value.trim() : value);
+const cleanString = (value) =>
+  typeof value === "string" ? value.trim().replace(/[\u0000-\u001F\u007F]/g, "") : value;
+
+const allowedFieldsValidator = body().custom((_, { req }) => {
+  const keys = Object.keys(req.body || {});
+  const restricted = keys.find((key) => restrictedProfileFields.includes(key));
+
+  if (restricted) {
+    throw new Error(`${restricted} cannot be updated from this endpoint`);
+  }
+
+  const unknown = keys.find((key) => !allowedProfileFields.includes(key));
+
+  if (unknown) {
+    throw new Error(`${unknown} is not an allowed profile field`);
+  }
+
+  if (!keys.length) {
+    throw new Error("At least one profile field is required");
+  }
+
+  return true;
+});
 
 const profileImageValidator = body("profileImage").optional().custom((value) => {
   if (!value) {
@@ -30,17 +65,44 @@ const profileImageValidator = body("profileImage").optional().custom((value) => 
 });
 
 const updateProfileValidator = [
-  body("name").trim().notEmpty().withMessage("Name is required"),
+  allowedFieldsValidator,
+
+  body("name")
+    .optional()
+    .customSanitizer(cleanString)
+    .isLength({ min: 2, max: 100 })
+    .withMessage("Name must be between 2 and 100 characters"),
+
   body("email")
     .optional({ checkFalsy: true })
+    .customSanitizer(trimString)
     .isEmail()
     .withMessage("Email must be valid")
     .normalizeEmail(),
+
   body("phone")
     .optional({ checkFalsy: true })
-    .trim()
+    .customSanitizer(trimString)
     .isLength({ min: 7, max: 20 })
-    .withMessage("Phone number must be between 7 and 20 characters"),
+    .withMessage("Phone number must be between 7 and 20 characters")
+    .bail()
+    .matches(phonePattern)
+    .withMessage("Phone number format is invalid")
+    .bail()
+    .custom((value) => {
+      const digitCount = String(value).replace(/\D/g, "").length;
+
+      if (digitCount < 7) {
+        throw new Error("Phone number must contain at least 7 digits");
+      }
+
+      return true;
+    }),
+
+  body("profileImage")
+    .optional()
+    .customSanitizer(trimString),
+
   profileImageValidator,
 ];
 
