@@ -2,8 +2,13 @@ const User = require("../models/User");
 const { serializeUser } = require("../utils/userSerializer");
 const { buildAllowedPatch, validateProfileImage } = require("./profileService");
 
-const buildQuery = ({ search, role, status, employeeId }) => {
+const buildQuery = ({ search, role, status, employeeId, excludeUserId }) => {
   const query = {};
+
+  // Exclude the admin's own entry
+  if (excludeUserId) {
+    query._id = { $ne: excludeUserId };
+  }
 
   if (role) {
     query.role = role;
@@ -62,9 +67,34 @@ const ensureUniqueUserFields = async ({ email, phone, employeeId, excludeUserId 
 };
 
 const getUsers = async (filters = {}) => {
-  const query = buildQuery(filters);
-  const users = await User.find(query).sort({ createdAt: -1 });
-  return users.map((user) => serializeUser(user));
+  const { page = 1, limit = 10, ...filterParams } = filters;
+  
+  // Validate pagination parameters
+  const pageNum = Math.max(1, parseInt(page) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 10)); // Max limit is 100
+  const skip = (pageNum - 1) * limitNum;
+
+  const query = buildQuery(filterParams);
+  
+  // Get total count for pagination
+  const total = await User.countDocuments(query);
+  
+  // Get paginated users
+  const users = await User.find(query)
+    .select("-password -__v")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limitNum);
+  
+  return {
+    users: users.map((user) => serializeUser(user)),
+    pagination: {
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
+    },
+  };
 };
 
 const getUserById = async (id) => {

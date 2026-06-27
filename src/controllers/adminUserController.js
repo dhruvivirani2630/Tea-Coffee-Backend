@@ -3,8 +3,13 @@ const { sendSuccess } = require("../utils/responseHandler");
 
 const getUsers = async (req, res, next) => {
   try {
-    const users = await adminUserService.getUsers(req.query);
-    return sendSuccess(res, 200, "Users fetched successfully", { users });
+    // Exclude the admin's own entry
+    const result = await adminUserService.getUsers({
+      ...req.query,
+      excludeUserId: req.user._id,
+    });
+    return sendSuccess(res, 200, "Users fetched successfully", result);
+    console.log("Users fetched successfully", result);
   } catch (error) {
     next(error);
   }
